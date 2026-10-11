@@ -19,6 +19,8 @@ for f in supabase/migrations/*.sql; do
   echo "applying $(basename "$f")"
   "${PSQL[@]}" -f "$f"
 done
-OUT="$("${PSQL[@]}" -f supabase/tests/behaviour.sql 2>&1)" || { echo "$OUT"; echo "database tests: FAILED"; exit 1; }
-echo "$OUT" | grep -E "NOTICE" | sed 's/.*NOTICE: */  /'
+for t in supabase/tests/behaviour*.sql; do
+  OUT="$("${PSQL[@]}" -f "$t" 2>&1)" || { echo "$OUT"; echo "database tests: FAILED in $(basename "$t")"; exit 1; }
+  echo "$OUT" | grep -E "NOTICE" | sed 's/.*NOTICE: */  /'
+done
 echo "database tests: OK"

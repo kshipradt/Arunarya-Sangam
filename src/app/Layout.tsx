@@ -3,6 +3,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { LANGUAGES } from "@/i18n/languages";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { Link, navigate } from "@/lib/router";
+import { useCart } from "@/features/shop/CartProvider";
 
 function LanguageMenu() {
   const { t, lang, setLang } = useI18n();
@@ -28,9 +29,20 @@ function LanguageMenu() {
   );
 }
 
+function CartLink() {
+  const { t } = useI18n();
+  const { count } = useCart();
+  return (
+    <Link to="/cart" className="cart-link" aria-label={t("cart.linkLabel", { count })}>
+      <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M3 4h2l2.4 10.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6.2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /><circle cx="10" cy="20" r="1.4" fill="currentColor" /><circle cx="17" cy="20" r="1.4" fill="currentColor" /></svg>
+      {count > 0 && <span className="cart-count" aria-hidden="true">{count > 99 ? "99+" : count}</span>}
+    </Link>
+  );
+}
+
 function AccountMenu() {
   const { t } = useI18n();
-  const { status, profile, signOut } = useAuth();
+  const { status, profile, staffRole, signOut } = useAuth();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -59,6 +71,22 @@ function AccountMenu() {
           <li role="none">
             <Link role="menuitem" to="/account" onClick={() => setOpen(false)}>{t("nav.account")}</Link>
           </li>
+          <li role="none">
+            <Link role="menuitem" to="/orders" onClick={() => setOpen(false)}>{t("orders.title")}</Link>
+          </li>
+          {profile && profile.role !== "buyer" && (
+            <li role="none">
+              <Link role="menuitem" to="/sell" onClick={() => setOpen(false)}>{t("sell.title")}</Link>
+            </li>
+          )}
+          <li role="none">
+            <Link role="menuitem" to="/help" onClick={() => setOpen(false)}>{t("help.title")}</Link>
+          </li>
+          {staffRole && (
+            <li role="none">
+              <Link role="menuitem" to="/admin" onClick={() => setOpen(false)} lang="en">ARUNARYA console</Link>
+            </li>
+          )}
           <li role="none">
             <button
               role="menuitem"
@@ -90,8 +118,13 @@ export function Layout({ children }: { children: ReactNode }) {
             <span className="brand-divider" aria-hidden="true" />
             <span className="brand-name">Sangam</span>
           </Link>
+          <nav className="main-nav" aria-label={t("nav.menu")}>
+            <Link to="/shop">{t("nav.shop")}</Link>
+            <Link to="/advertise" className="nav-highlight">{t("nav.advertise")}</Link>
+          </nav>
           <div className="header-tools">
             <LanguageMenu />
+            <CartLink />
             <AccountMenu />
           </div>
         </div>
@@ -106,6 +139,13 @@ export function Layout({ children }: { children: ReactNode }) {
               <p>{t("common.tagline")}</p>
             </div>
           </div>
+          <nav className="footer-links" aria-label={t("nav.footer")}>
+            <Link to="/shop">{t("nav.shop")}</Link>
+            <Link to="/advertise">{t("nav.advertise")}</Link>
+            <Link to="/help">{t("help.title")}</Link>
+            <Link to="/legal/terms">{t("legal.terms")}</Link>
+            <Link to="/legal/privacy">{t("legal.privacy")}</Link>
+          </nav>
           <p className="footer-disclaimer">{t("footer.disclaimer")}</p>
           <p className="footer-rights">{t("footer.rights")}</p>
           <p className="footer-credit" lang="en" dir="ltr">

@@ -6,6 +6,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import * as authApi from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/http";
 import { loadSession, saveSession, secondsUntilRefresh, SESSION_KEY, type Session } from "@/lib/api/session";
+import { select } from "@/lib/api/rest";
 import { fetchProfile, saveProfile, type Profile, type ProfileUpdate } from "./profile";
 
 type Status = "loading" | "signedOut" | "signedIn";
@@ -14,6 +15,8 @@ type AuthValue = {
   status: Status;
   session: Session | null;
   profile: Profile | null;
+  /** ARUNARYA team members only; the database decides what staff may do. */
+  staffRole: "admin" | "support" | null;
   /** Returns a valid access token, refreshing first if it is about to expire. */
   getAccessToken: () => Promise<string>;
   acceptSession: (session: Session) => Promise<Profile | null>;
@@ -29,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(() => loadSession());
   const [profile, setProfile] = useState<Profile | null>(null);
   const [status, setStatus] = useState<Status>(session ? "loading" : "signedOut");
+  const [staffRole, setStaffRole] = useState<"admin" | "support" | null>(null);
   const refreshing = useRef<Promise<Session> | null>(null);
 
   const commit = useCallback((s: Session | null) => {
@@ -36,6 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(s);
     if (!s) {
       setProfile(null);
+      setStaffRole(null);
       setStatus("signedOut");
     }
   }, []);
@@ -68,8 +73,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [session, refresh]);
 
   const loadProfileFor = useCallback(async (s: Session) => {
-    const p = await fetchProfile(s.user.id, s.access_token);
+    const [p, staffRows] = await Promise.all([
+      fetchProfile(s.user.id, s.access_token),
+      select<{ role: "admin" | "support" }>("staff", `user_id=eq.${s.user.id}&select=role`, s.access_token).catch(() => []),
+    ]);
     setProfile(p);
+    setStaffRole(staffRows[0]?.role ?? null);
     setStatus("signedIn");
     return p;
   }, []);
@@ -140,8 +149,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [session, getAccessToken, loadProfileFor]);
 
   const value = useMemo<AuthValue>(
-    () => ({ status, session, profile, getAccessToken, acceptSession, signIn, signOut, updateProfile, reloadProfile }),
-    [status, session, profile, getAccessToken, acceptSession, signIn, signOut, updateProfile, reloadProfile],
+    () => ({ status, session, profile, staffRole, getAccessToken, acceptSession, signIn, signOut, updateProfile, reloadProfile }),
+    [status, session, profile, staffRole, getAccessToken, acceptSession, signIn, signOut, updateProfile, reloadProfile],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

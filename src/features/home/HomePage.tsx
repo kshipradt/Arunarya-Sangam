@@ -20,13 +20,15 @@ export function HomePage() {
             <p className="eyebrow">{t("home.eyebrow")}</p>
             <h1>{t("home.title")}</h1>
             <p className="lead">{t("home.lead")}</p>
-            {status !== "signedIn" && (
-              <div className="hero-actions">
-                <Link to="/auth/sign-up" className="btn btn-primary btn-lg">{t("home.ctaJoin")}</Link>
-                <Link to="/auth/sign-in" className="btn btn-secondary btn-lg">{t("home.ctaSignIn")}</Link>
-              </div>
-            )}
-            <p className="hero-note">{t("home.comingSoon")}</p>
+            <div className="hero-actions">
+              <Link to="/shop" className="btn btn-primary btn-lg">{t("home.ctaShop")}</Link>
+              {status === "signedIn" ? (
+                <Link to="/sell" className="btn btn-secondary btn-lg">{t("home.ctaSell")}</Link>
+              ) : (
+                <Link to="/auth/sign-up" className="btn btn-secondary btn-lg">{t("home.ctaJoin")}</Link>
+              )}
+            </div>
+            <p className="hero-note">{t("home.benefits")}</p>
           </div>
           <img className="hero-logo" src="/brand/arunarya-logo.png" alt="ARUNARYA" width={340} height={340} />
         </div>
@@ -46,6 +48,17 @@ export function HomePage() {
               </li>
             ))}
           </ul>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="container ad-band">
+          <div>
+            <p className="eyebrow">{t("ad.eyebrow")}</p>
+            <h2>{t("home.adTitle")}</h2>
+            <p>{t("home.adBody")}</p>
+          </div>
+          <Link to="/advertise" className="btn btn-primary btn-lg">{t("nav.advertise")}</Link>
         </div>
       </section>
 

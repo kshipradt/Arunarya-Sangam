@@ -1,5 +1,5 @@
 /**
- * End-to-end browser test of Phase 1 journeys against the production build.
+ * End-to-end browser test of Phase 1 and 2 journeys against the production build.
  *
  * The Supabase API and Cloudflare Turnstile are replaced by deterministic
  * fakes, so the test checks the app's own behaviour: language choice,
@@ -46,6 +46,27 @@ let profile = {
 };
 const calls = [];
 
+// Sample catalogue for the Phase 2 journeys.
+const PHOTO = "data:image/svg+xml;utf8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10" fill="#c9875f"/><circle cx="5" cy="5" r="3" fill="#8c3a23"/></svg>');
+const PRODUCTS = [
+  { id: "00000000-0000-4000-8000-000000000001", title: "Hand-carved sheesham wood jewellery box", price_inr: 1450, mrp_inr: 1800, stock: 4, seller_id: "s1", seller_name: "Saharanpur Wood Works", category: "Woodcraft", gi_tagged: true },
+  { id: "00000000-0000-4000-8000-000000000002", title: "Banarasi silk stole, zari border", price_inr: 2200, mrp_inr: null, stock: 12, seller_id: "s2", seller_name: "Kashi Looms", category: "Textiles", gi_tagged: true },
+  { id: "00000000-0000-4000-8000-000000000003", title: "Moradabad brass diya set of 2", price_inr: 650, mrp_inr: 799, stock: 0, seller_id: "s3", seller_name: "Peetal Nagri Crafts", category: "Metalcraft", gi_tagged: false },
+  { id: "00000000-0000-4000-8000-000000000004", title: "Khurja blue pottery planter", price_inr: 890, mrp_inr: null, stock: 20, seller_id: USER_ID, seller_name: "Test Maker", category: "Pottery & Ceramics", gi_tagged: false },
+];
+const card = (x) => ({ ...x, image_url: PHOTO, seller_verified: x.seller_id !== USER_ID, district_name: "Saharanpur", state_name: "Uttar Pradesh", rating_avg: x.id === PRODUCTS[0].id ? 4.8 : null, rating_count: x.id === PRODUCTS[0].id ? 12 : 0 });
+const detail = (x) => ({ ...x, description: "Carved by hand from seasoned sheesham.\n\nEach piece is unique.", unit: "piece", image_urls: [PHOTO, PHOTO], status: "active", blocked: false, blocked_reason: null, country_of_origin: "India", rating_avg: 4.8, rating_count: 12, district_id: "d-sre", odop_product_id: "o1", district: { name: "Saharanpur", state: "Uttar Pradesh" }, odop: { name: "Wood craft", category: "Handicrafts" }, odop_product: null, updated_at: "2026-10-10T10:00:00Z" });
+let cart = [];
+const ORDER = {
+  id: "0a1b2c3d-0000-4000-8000-000000000001", status: "placed", payment_method: "cod", payment_status: "pending",
+  subtotal_inr: 2900, standing_discount_inr: 145, coupon_code: null, coupon_discount_inr: 0, shipping_inr: 0, total_inr: 2755,
+  address: { name: "Test Maker", phone: "9876543210", line1: "12 Court Road", city: "Saharanpur", state: "Uttar Pradesh", pincode: "247001" },
+  created_at: "2026-10-11T08:00:00Z",
+  order_items: [{ id: "oi1", product_id: "00000000-0000-4000-8000-000000000001", title: "Hand-carved sheesham wood jewellery box", unit_price_inr: 1450, qty: 2, status: "placed", review: [] }],
+};
+const TICKET = { id: "t1", ticket_no: "SG-000101", category: "order", subject: "Cracked lid", status: "open", order_id: null, created_at: "2026-10-11T09:00:00Z", ack_due_at: "2026-10-13T09:00:00Z", resolve_due_at: "2026-11-10T09:00:00Z", acknowledged_at: null, resolved_at: null };
+
+
 async function fakeSupabase(route) {
   const req = route.request();
   const url = new URL(req.url());
@@ -78,6 +99,39 @@ async function fakeSupabase(route) {
     profile = { ...profile, ...body };
     return json(200, [profile]);
   }
+
+  // ---------- Phase 2: shop, cart, orders, seller, help, advertising ----------
+  if (p === "/rest/v1/rpc/search_products") return json(200, PRODUCTS.map((x, i) => ({ ...card(x), total_count: PRODUCTS.length })));
+  if (p === "/rest/v1/shop_products" && req.method() === "GET") {
+    if (url.search.includes("seller_id=eq.")) return json(200, PRODUCTS.filter((x) => x.seller_id === USER_ID).map(detail));
+    const ids = (url.searchParams.get("id") ?? "").replace(/^(eq\.|in\.\()|\)$/g, "").split(",");
+    return json(200, PRODUCTS.filter((x) => ids.includes(x.id)).map(detail));
+  }
+  if (p === "/rest/v1/rpc/seller_public_details") return json(200, [{ legal_name: "Saharanpur Wood Works", business_address: "12 Kamboh Pul, Saharanpur, UP 247001", customer_care_phone: "+91 98765 43210" }]);
+  if (p === "/rest/v1/product_reviews") return json(200, [{ id: "r1", buyer_name: "Asha", rating: 5, title: "Beautiful carving", body: "Arrived well packed.", created_at: "2026-10-01T10:00:00Z" }]);
+  if (p === "/rest/v1/platform_settings") return json(200, [{ key: "standing_discount_percent", value: 5 }]);
+  if (p === "/rest/v1/cart_items") {
+    if (req.method() === "GET") return json(200, cart.map((l) => ({ product_id: l.product_id, qty: l.qty })));
+    if (req.method() === "POST") {
+      for (const row of [body].flat()) { cart = cart.filter((l) => l.product_id !== row.product_id); cart.push(row); }
+      return route.fulfill({ status: 201 });
+    }
+    if (req.method() === "DELETE") { cart = cart.filter((l) => !url.search.includes(l.product_id)); return route.fulfill({ status: 204 }); }
+  }
+  if (p === "/rest/v1/rpc/quote_cart") {
+    const subtotal = cart.reduce((s, l) => s + PRODUCTS.find((x) => x.id === l.product_id).price_inr * l.qty, 0);
+    const standing = Math.round(subtotal * 0.05);
+    return json(200, [{ subtotal, standing_discount: standing, coupon_discount: 0, shipping: 0, total: subtotal - standing, coupon_ok: false }]);
+  }
+  if (p === "/rest/v1/rpc/place_order") { cart = []; return json(200, ORDER.id); }
+  if (p === "/rest/v1/orders") return json(200, [ORDER]);
+  if (p === "/rest/v1/seller_verifications") return json(200, []);
+  if (p === "/rest/v1/order_items") return json(200, []);
+  if (p === "/rest/v1/staff") return json(200, []);
+  if (p === "/rest/v1/rpc/open_ticket") return json(200, "SG-000101");
+  if (p === "/rest/v1/tickets") return json(200, url.search.includes("ticket_no") || url.search.includes("id=eq") ? [TICKET] : [TICKET]);
+  if (p === "/rest/v1/ticket_messages") return json(200, [{ id: "m1", from_staff: false, body: "My order arrived with a cracked lid.", created_at: "2026-10-11T09:00:00Z" }]);
+  if (p === "/rest/v1/ad_inquiries" && req.method() === "POST") return route.fulfill({ status: 201 });
   return json(404, { message: "not mocked: " + p });
 }
 
@@ -222,6 +276,149 @@ try {
       const leaked = /\b(auth|pw|v|field|roles)\.[a-zA-Z]+/.test(text);
       const fits = await noSidewaysScroll(page);
       check(`Sign-up in ${code}: all text translated, fits phone`, !leaked && fits);
+    }
+    await ctx.close();
+  }
+
+  // 6. Shop as a guest (desktop, English): browse, product page, add to cart
+  {
+    const { page, errors, ctx } = await newPage(1280, 900);
+    await page.goto(base + "/shop?lang=en");
+    await page.waitForSelector(".product-tile");
+    check("Shop lists products from search", (await page.locator(".product-tile").count()) === 4);
+    check("Out-of-stock product is labelled", (await page.locator(".product-oos").count()) === 1);
+    await page.screenshot({ path: join(out, "08-shop-desktop.png"), fullPage: true });
+    await page.locator(".product-tile", { hasText: "sheesham" }).click();
+    await page.waitForSelector(".buy-box");
+    const facts = await page.locator(".product-info").innerText();
+    check("Product page shows GI, ODOP and ARUNARYA discount", /GI/.test(facts) && /ODOP/.test(facts) && /5% ARUNARYA/.test(facts));
+    check("Product page shows seller legal details", (await page.locator(".seller-facts").innerText()).includes("Kamboh Pul"));
+    await page.getByLabel("Quantity").selectOption("2");
+    await page.getByRole("button", { name: "Add to cart" }).click();
+    await page.waitForSelector(".cart-count");
+    check("Cart badge counts added items", (await page.locator(".cart-count").innerText()) === "2");
+    await page.screenshot({ path: join(out, "09-product-desktop.png"), fullPage: true });
+    await page.getByRole("link", { name: "View cart" }).click();
+    await page.waitForSelector(".cart-line");
+    check("Guest cart keeps the line after navigation", (await page.locator(".cart-line").count()) === 1);
+    await page.screenshot({ path: join(out, "10-cart-guest-desktop.png"), fullPage: true });
+    check("No browser errors while shopping", errors.length === 0, errors.join(" | "));
+    // 7. Checkout needs sign-in; the guest cart merges into the account
+    await page.getByRole("button", { name: "Proceed to checkout" }).click();
+    await page.waitForURL("**/auth/sign-in**");
+    await page.getByLabel("Email address").fill("maker@example.in");
+    await page.getByLabel("Password", { exact: true }).fill("Correct-Horse9!");
+    await page.waitForTimeout(100);
+    await page.getByRole("button", { name: "Log in", exact: true }).click();
+    await page.waitForURL("**/checkout**");
+    await page.waitForSelector(".quote .total");
+    check("Guest cart merged into the account on sign-in", cart.length === 1 && cart[0].qty === 2, JSON.stringify(cart));
+    const total = await page.locator(".quote .total dd").innerText();
+    check("Checkout total comes from the database quote", total.includes("2,755"), total);
+    await page.getByLabel("Mobile number").fill("98765 43210");
+    await page.getByLabel("House, street and area").fill("12 Court Road");
+    await page.getByLabel("City").fill("Saharanpur");
+    await page.getByLabel("State").selectOption({ label: "Uttar Pradesh" });
+    await page.getByLabel("PIN code").fill("247001");
+    await page.screenshot({ path: join(out, "11-checkout-desktop.png"), fullPage: true });
+    await page.getByRole("button", { name: "Place order" }).click();
+    await page.waitForURL("**/orders/**placed=1");
+    const order = calls.filter((c) => c.path.startsWith("/rest/v1/rpc/place_order")).at(-1)?.body;
+    check("Order is placed as cash on delivery with a clean address", order?.p_method === "cod" && order?.p_address?.phone === "9876543210" && order?.p_address?.pincode === "247001", JSON.stringify(order));
+    await page.waitForSelector(".tracker");
+    check("Order page shows the thank-you and tracker", (await page.locator(".alert-success").count()) === 1 && (await page.locator(".tracker li").count()) === 4);
+    await page.screenshot({ path: join(out, "12-order-desktop.png"), fullPage: true });
+    check("No browser errors during checkout", errors.length === 0, errors.join(" | "));
+    await ctx.close();
+  }
+
+  // 8. Phone layouts in Hindi and Urdu for the new screens
+  {
+    const { page, errors, ctx } = await newPage(390, 844);
+    for (const [code, path, shot] of [["hi", "/shop", "13-shop-hindi-phone"], ["hi", "/product/00000000-0000-4000-8000-000000000001", "14-product-hindi-phone"], ["ur", "/shop", "15-shop-urdu-phone"], ["hi", "/advertise", "16-advertise-hindi-phone"]]) {
+      await page.goto(`${base}${path}?lang=${code}`);
+      await page.waitForSelector("h1");
+      await page.waitForTimeout(150);
+      check(`${path} in ${code} fits a 390 px phone`, await noSidewaysScroll(page));
+      await page.screenshot({ path: join(out, shot + ".png"), fullPage: true });
+    }
+    check("No browser errors on phone shop pages", errors.length === 0, errors.join(" | "));
+    await ctx.close();
+  }
+
+  // 9. Advertise enquiry (English)
+  {
+    const { page, errors, ctx } = await newPage(1280, 900);
+    await page.goto(base + "/?lang=en");
+    await page.waitForSelector(".ad-band");
+    check("Home page highlights advertising", (await page.locator(".ad-band").count()) === 1 && (await page.locator(".main-nav .nav-highlight").count()) === 1);
+    await page.screenshot({ path: join(out, "17-home-desktop.png"), fullPage: true });
+    await page.locator(".ad-band a").click();
+    await page.waitForURL("**/advertise");
+    await page.getByRole("button", { name: "Send enquiry" }).click();
+    check("Empty enquiry shows errors", (await page.locator(".field-error").count()) >= 2);
+    await page.getByLabel("Full name").fill("Meera Handlooms");
+    await page.getByLabel("Email address").fill("meera@example.in");
+    await page.getByLabel("Monthly budget").selectOption("5to25k");
+    await page.getByRole("button", { name: "Send enquiry" }).click();
+    await page.waitForSelector(".alert-success");
+    const ad = calls.filter((c) => c.path === "/rest/v1/ad_inquiries").at(-1)?.body;
+    check("Advertising enquiry is saved", ad?.email === "meera@example.in" && ad?.budget_range === "5to25k", JSON.stringify(ad));
+    await page.screenshot({ path: join(out, "18-advertise-desktop.png"), fullPage: true });
+    check("No browser errors on advertise", errors.length === 0, errors.join(" | "));
+    await ctx.close();
+  }
+
+  // 10. Seller centre and complaints (signed in, phone, English)
+  {
+    const { page, errors, ctx } = await newPage(390, 844);
+    await page.goto(base + "/auth/sign-in?lang=en&next=%2Fsell");
+    await page.getByLabel("Email address").fill("maker@example.in");
+    await page.getByLabel("Password", { exact: true }).fill("Correct-Horse9!");
+    await page.waitForTimeout(100);
+    await page.getByRole("button", { name: "Log in", exact: true }).click();
+    await page.waitForURL("**/sell");
+    await page.waitForSelector(".seller-product-row");
+    check("Seller centre asks unverified sellers to verify", (await page.locator(".alert-info", { hasText: "Verify" }).count()) === 1);
+    check("Seller centre lists the seller's own products", (await page.locator(".seller-product-row").count()) === 1);
+    check("Seller centre fits a 390 px phone", await noSidewaysScroll(page));
+    await page.screenshot({ path: join(out, "19-seller-phone.png"), fullPage: true });
+    await page.goto(base + "/sell/products/new");
+    await page.waitForSelector("form");
+    check("A signed-in person on a new device gets their profile language", (await page.getAttribute("html", "lang")) === "hi");
+    await page.goto(base + "/sell/products/new?lang=en");
+    await page.waitForSelector("form");
+    await page.getByRole("button", { name: "Publish" }).click();
+    check("Publishing an empty product shows errors", (await page.locator(".field-error").count()) >= 2);
+    await page.screenshot({ path: join(out, "20-product-form-phone.png"), fullPage: true });
+    await page.goto(base + "/help/new?lang=en");
+    await page.getByLabel("Subject").fill("Cracked lid");
+    await page.getByLabel("Tell us what happened").fill("My order arrived with a cracked lid.");
+    await page.getByRole("button", { name: "Submit complaint" }).click();
+    await page.waitForURL("**/help/t1?new=1");
+    check("Complaint gets a ticket number and legal deadlines", (await page.locator(".alert-success").innerText()).includes("SG-000101") && (await page.locator(".summary dd").count()) >= 2);
+    await page.screenshot({ path: join(out, "21-complaint-phone.png"), fullPage: true });
+    check("No browser errors for seller and help", errors.length === 0, errors.join(" | "));
+    await ctx.close();
+  }
+
+  // 11. Every language renders the shop, cart and advertise pages without missing text
+  {
+    const { page, ctx } = await newPage(390, 844);
+    for (const code of ["en", "hi", "bn", "mr", "te", "ta", "gu", "ur", "kn", "or", "ml", "pa", "as"]) {
+      let leaked = false, fits = true;
+      for (const path of ["/shop", "/cart", "/advertise"]) {
+        await page.goto(`${base}${path}?lang=${code}`);
+        await page.waitForSelector("h1");
+        await page.waitForTimeout(80);
+        const text = await page.locator("body").innerText();
+        leaked ||= /\b(shop|cart|cat|ad|nav|home|sell|help|checkout|orders|status|review)\.[a-zA-Z]+/.test(text);
+        const f = await noSidewaysScroll(page);
+        if (!f) console.log("  overflow", code, path, await page.evaluate(() => [...document.querySelectorAll("body *")].filter((e) => e.getBoundingClientRect().right > innerWidth + 1 || e.getBoundingClientRect().left < -1).slice(0, 4).map((e) => e.tagName + "." + e.className + " " + Math.round(e.getBoundingClientRect().left) + "→" + Math.round(e.getBoundingClientRect().right)).join(", ")));
+        if (/\b(shop|cart|cat|ad|nav|home|sell|help|checkout|orders|status|review)\.[a-zA-Z]+/.test(await page.locator("body").innerText())) console.log("  leaked", code, path);
+        fits &&= f;
+      }
+      check(`Shop, cart and advertise in ${code}: translated, fit phone`, !leaked && fits);
     }
     await ctx.close();
   }
