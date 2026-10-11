@@ -1,0 +1,29 @@
+{
+  "name": "arunarya-sangam",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ARUNARYA Sangam: a multilingual marketplace and network for India's One District One Product (ODOP) crafts.",
+  "type": "module",
+  "scripts": {
+    "build": "bun run scripts/build.ts",
+    "dev": "bun run scripts/dev.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "bun test src",
+    "e2e": "node e2e/run.mjs",
+    "check": "bun run typecheck && bun run test && bun run build"
+  },
+  "dependencies": {
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.3",
+    "playwright": "1.56.0",
+    "typescript": "6.0.3"
+  },
+  "engines": {
+    "bun": ">=1.2"
+  }
+}
