@@ -10,11 +10,11 @@ export type PublicConfig = {
   siteUrl: string;
 };
 
-// Development defaults: the current shared Supabase project and Cloudflare's
+// Defaults: ARUNARYA's own Supabase project (Mumbai) and Cloudflare's
 // official always-pass Turnstile test key. Production sets real values.
 const DEFAULTS: PublicConfig = {
-  supabaseUrl: "https://ozpcrlzahutdvcamomzs.supabase.co",
-  supabaseKey: "sb_publishable_bbVU8PdvO0GsNGbQohcRuA_GySXW5CQ",
+  supabaseUrl: "https://etpeszyqkcduikpeqvzd.supabase.co",
+  supabaseKey: "sb_publishable_CvItymr9wInlr1-GpNRz_Q_R-Jd-hFg",
   turnstileSiteKey: "1x00000000000000000000AA",
   googleSignIn: false,
   siteUrl: "http://localhost:5173",
