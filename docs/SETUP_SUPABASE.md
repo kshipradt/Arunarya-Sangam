@@ -18,15 +18,23 @@ Never paste the **secret key** or the **database password** into a chat.
 
 ## 3. Build the database
 
-In **SQL Editor**, run these files in order (copy the contents, press Run):
+In **SQL Editor → New query**, paste and **Run** these two files, one after the other:
 
-1. `supabase/migrations/20261010000001_core_network.sql`
-2. `supabase/migrations/20261010000002_commerce.sql`
-3. `supabase/migrations/20261012000003_world_locations_and_profiles.sql`
-4. `supabase/seed/load_reference_data.sql` (about a minute; prints the counts)
-5. `supabase/seed/seed_content.sql`
+1. `supabase/setup/step1_build_database.sql`: all tables, security rules and functions (runs as one unit; if anything fails, nothing is half-made).
+2. `supabase/setup/step2_load_data.sql`: world and India locations, ODOP districts, sample ODOP products, discounts and scheme guides. Takes 1–3 minutes. The last result should show about 250 countries, 5,328 states, 152,571 cities and 784 districts.
 
-The same files are tested automatically on every change (`scripts/test-db.sh`).
+Both files are built from `supabase/migrations/` and `supabase/seed/`, and the same SQL is tested automatically (`scripts/test-db.sh`).
+
+### Make yourself an administrator
+
+After you have signed up in the app with your own email, run this once in a new query (change the email):
+
+```sql
+insert into public.staff (user_id, role)
+select id, 'admin' from auth.users where email = 'you@example.com';
+```
+
+The **ARUNARYA console** then appears in your account menu.
 
 ## 4. Sign-in settings (Authentication)
 
