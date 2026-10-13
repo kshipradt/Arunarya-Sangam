@@ -20,7 +20,8 @@ type TokenResponse = {
   user: unknown;
 };
 
-const callbackUrl = () => `${config.siteUrl}/auth/callback`;
+// Links in emails return to the address the person is actually using.
+const callbackUrl = () => `${typeof location !== "undefined" && location.origin.startsWith("http") ? location.origin : config.siteUrl}/auth/callback`;
 const security = (captchaToken?: string | null) =>
   captchaToken ? { gotrue_meta_security: { captcha_token: captchaToken } } : {};
 
@@ -57,6 +58,34 @@ export async function signInWithPassword(email: string, password: string, captch
   const res = await request<TokenResponse>("/auth/v1/token?grant_type=password", {
     method: "POST",
     body: { email, password, ...security(captchaToken) },
+  });
+  return sessionFromTokenResponse(res);
+}
+
+export type OtpTarget = { email: string } | { phone: string };
+
+/**
+ * Sends a one-time sign-in code by email or SMS. New people get an account
+ * (role buyer until they complete their profile) in their chosen language.
+ */
+export async function sendSignInCode(target: OtpTarget, language: LanguageCode, captchaToken?: string | null) {
+  await request("/auth/v1/otp", {
+    method: "POST",
+    body: {
+      ...target,
+      ...("phone" in target ? { channel: "sms" } : {}),
+      create_user: true,
+      data: { preferred_language: language },
+      ...security(captchaToken),
+    },
+  });
+}
+
+/** Checks the 6-digit code and returns a session. */
+export async function verifySignInCode(target: OtpTarget, token: string) {
+  const res = await request<TokenResponse>("/auth/v1/verify", {
+    method: "POST",
+    body: { ...target, token, type: "phone" in target ? "sms" : "email" },
   });
   return sessionFromTokenResponse(res);
 }

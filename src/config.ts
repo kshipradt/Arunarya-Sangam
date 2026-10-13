@@ -9,6 +9,7 @@ const fallback: AppConfig = {
   supabaseKey: "sb_publishable_test",
   turnstileSiteKey: "1x00000000000000000000AA",
   googleSignIn: false,
+  phoneSignIn: false,
   siteUrl: "http://localhost:5173",
 };
 

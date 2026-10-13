@@ -59,6 +59,10 @@ export function SignInPage() {
   return (
     <AuthCard title={t("auth.signIn.title")}>
       <GoogleButton />
+      <Link to={`/auth/code${search.get("next") ? `?next=${encodeURIComponent(next)}` : ""}`} className="btn btn-secondary btn-block code-link">
+        {t("auth.code.cta")}
+      </Link>
+      <p className="divider">{t("auth.code.orPassword")}</p>
       <form onSubmit={onSubmit} noValidate>
         {formError && (
           <Alert>

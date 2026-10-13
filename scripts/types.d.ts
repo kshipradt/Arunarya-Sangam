@@ -4,6 +4,7 @@ declare const __APP_CONFIG__: {
   supabaseKey: string;
   turnstileSiteKey: string;
   googleSignIn: boolean;
+  phoneSignIn: boolean;
   siteUrl: string;
 };
 

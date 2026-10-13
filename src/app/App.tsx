@@ -4,6 +4,7 @@ import { CompleteProfilePage } from "@/features/account/CompleteProfilePage";
 import { AdvertisePage } from "@/features/advertise/AdvertisePage";
 import { AdminOverview, AdminProducts, AdminSellers, AdminSettings, AdminTicket, AdminTickets, RequireStaff } from "@/features/admin/AdminPages";
 import { AuthCallbackPage, CheckEmailPage, ForgotPasswordPage, ResetPasswordPage } from "@/features/auth/EmailFlows";
+import { CodeSignInPage } from "@/features/auth/CodeSignInPage";
 import { SignInPage } from "@/features/auth/SignInPage";
 import { SignUpPage } from "@/features/auth/SignUpPage";
 import { HelpPage, NewTicketPage, TicketThread } from "@/features/help/HelpPages";
@@ -58,6 +59,7 @@ function AppRoutes() {
       { path: "/admin/settings", render: () => staff(<AdminSettings />) },
       // accounts
       { path: "/auth/sign-in", render: () => <SignInPage /> },
+      { path: "/auth/code", render: () => <CodeSignInPage /> },
       { path: "/auth/sign-up", render: () => <SignUpPage /> },
       { path: "/auth/check-email", render: () => <CheckEmailPage /> },
       { path: "/auth/forgot-password", render: () => <ForgotPasswordPage /> },

@@ -48,6 +48,19 @@ The **ARUNARYA console** then appears in your account menu.
 | Leaked password protection | same | Off for now (needs the Pro plan; the app blocks common passwords itself) |
 | Bot protection | Authentication → Attack Protection | On, provider **Cloudflare Turnstile**, paste the Turnstile **secret** key |
 
+### Sign-in codes by email
+
+Authentication → Emails → **Magic Link** template: subject `Your ARUNARYA Sangam sign-in code`, body:
+
+```html
+<h2>Your ARUNARYA Sangam sign-in code</h2>
+<p>Enter this code to sign in:</p>
+<p style="font-size:28px;font-weight:bold;letter-spacing:6px">{{ .Token }}</p>
+<p>If you didn't ask for this, you can ignore this email.</p>
+```
+
+Phone (SMS) codes: see `docs/PHONE_SIGN_IN.md`.
+
 ## 5. Cloudflare Turnstile keys (free)
 
 1. https://dash.cloudflare.com → **Turnstile** → **Add widget**.

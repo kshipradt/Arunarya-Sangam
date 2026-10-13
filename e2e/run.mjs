@@ -82,6 +82,11 @@ async function fakeSupabase(route) {
     }
     return json(400, { code: 400, error_code: "invalid_credentials", msg: "Invalid login credentials" });
   }
+  if (p === "/auth/v1/otp") return json(200, {});
+  if (p === "/auth/v1/verify") {
+    if (body.token === "123456") return json(200, { access_token: jwt, refresh_token: "refresh-2", expires_in: 3600, user: { id: USER_ID, email: body.email, user_metadata: {} } });
+    return json(403, { code: 403, error_code: "otp_expired", msg: "Token has expired or is invalid" });
+  }
   if (p === "/auth/v1/logout") return route.fulfill({ status: 204 });
   if (p === "/rest/v1/geo_countries") return json(200, [
     { id: 101, iso2: "IN", name: "India", native_name: "भारत", emoji: "🇮🇳" },
@@ -420,6 +425,33 @@ try {
       }
       check(`Shop, cart and advertise in ${code}: translated, fit phone`, !leaked && fits);
     }
+    await ctx.close();
+  }
+
+  // 12. Sign in with a one-time email code (phone, English)
+  {
+    const { page, errors, ctx } = await newPage(390, 844);
+    await page.goto(base + "/auth/sign-in?lang=en");
+    await page.getByRole("link", { name: "Continue with a one-time code" }).click();
+    await page.waitForURL("**/auth/code**");
+    check("Phone tab explains SMS codes are coming soon", (await page.getByRole("tab", { name: "Mobile number" }).count()) === 1);
+    await page.getByLabel("Email address").fill("Maker@Example.in ");
+    await page.waitForTimeout(100);
+    await page.getByRole("button", { name: "Send code" }).click();
+    await page.waitForSelector("text=Enter your code");
+    const otp = calls.filter((c) => c.path === "/auth/v1/otp").at(-1)?.body;
+    check("Code request sends a clean email, language and captcha", otp?.email === "maker@example.in" && otp?.data?.preferred_language === "en" && otp?.gotrue_meta_security?.captcha_token === "test-token", JSON.stringify(otp));
+    await page.getByLabel("6-digit code").fill("111111");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForSelector(".alert-error");
+    check("A wrong code shows a clear message", (await page.locator(".alert-error").innerText()).includes("wrong or has expired"));
+    await page.screenshot({ path: join(out, "22-code-signin-phone.png"), fullPage: true });
+    await page.getByLabel("6-digit code").fill("123456");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL(/\/account/);
+    check("The right code signs the person in", true);
+    check("Code sign-in fits a 390 px phone", await noSidewaysScroll(page));
+    check("No browser errors during code sign-in", errors.length === 0, errors.join(" | "));
     await ctx.close();
   }
 } finally {

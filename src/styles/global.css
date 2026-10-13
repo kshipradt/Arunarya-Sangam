@@ -449,3 +449,12 @@ legend { margin-bottom: 10px; padding: 0; }
 /* Keep a card's legend inside the card instead of on its border. */
 fieldset.card > legend { float: inline-start; width: 100%; margin-bottom: 10px; font-family: var(--font-display); font-size: 1.25rem; }
 fieldset.card > legend + * { clear: both; }
+
+/* Sign in with a code */
+.code-link { margin-bottom: 4px; }
+.segmented-full { display: flex; width: 100%; }
+.segmented-full button { flex: 1; text-transform: none; }
+.code-input { font-size: 1.6rem !important; letter-spacing: 0.4em; text-align: center; font-variant-numeric: tabular-nums; }
+.field-prefix { position: absolute; inset-inline-start: 14px; top: 50%; transform: translateY(-50%); color: var(--ink-soft); font-weight: 600; pointer-events: none; }
+.field-control:has(.field-prefix) input { padding-inline-start: 3.2rem !important; }
+.code-actions { display: grid; gap: 10px; justify-items: center; margin-top: 16px; }

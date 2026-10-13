@@ -7,6 +7,8 @@ export type PublicConfig = {
   supabaseKey: string;
   turnstileSiteKey: string;
   googleSignIn: boolean;
+  /** Sign-in by SMS code; switch on once an SMS provider is connected in Supabase. */
+  phoneSignIn: boolean;
   siteUrl: string;
 };
 
@@ -17,6 +19,7 @@ const DEFAULTS: PublicConfig = {
   supabaseKey: "sb_publishable_CvItymr9wInlr1-GpNRz_Q_R-Jd-hFg",
   turnstileSiteKey: "1x00000000000000000000AA",
   googleSignIn: false,
+  phoneSignIn: false,
   siteUrl: "http://localhost:5173",
 };
 
@@ -30,6 +33,7 @@ export function readPublicConfig(env: Record<string, string | undefined> = proce
     supabaseKey: key,
     turnstileSiteKey: env.PUBLIC_TURNSTILE_SITE_KEY ?? DEFAULTS.turnstileSiteKey,
     googleSignIn: (env.PUBLIC_GOOGLE_SIGN_IN ?? String(DEFAULTS.googleSignIn)) === "true",
+    phoneSignIn: (env.PUBLIC_PHONE_SIGN_IN ?? String(DEFAULTS.phoneSignIn)) === "true",
     siteUrl: (env.PUBLIC_SITE_URL ?? DEFAULTS.siteUrl).replace(/\/+$/, ""),
   };
 }

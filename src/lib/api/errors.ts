@@ -21,6 +21,12 @@ const BY_CODE: Record<string, MessageKey> = {
   session_not_found: "err.session_expired",
   refresh_token_not_found: "err.session_expired",
   bad_jwt: "err.session_expired",
+  otp_expired: "auth.code.wrong",
+  otp_disabled: "auth.code.unavailable",
+  phone_provider_disabled: "auth.code.unavailable",
+  sms_send_failed: "auth.code.smsFailed",
+  over_sms_send_rate_limit: "err.rate_limit",
+  validation_failed: "auth.code.unavailable",
   network_error: "err.network",
   timeout: "err.timeout",
 };

@@ -83,6 +83,9 @@ export function SignUpPage() {
   return (
     <AuthCard title={t("auth.signUp.title")}>
       <GoogleButton />
+      <Alert tone="info">
+        {t("auth.code.noPasswordNeeded")} <Link to="/auth/code">{t("auth.code.cta")}</Link>
+      </Alert>
       <form onSubmit={onSubmit} noValidate>
         {formError && <Alert>{t(formError)}</Alert>}
         <RadioCards
