@@ -20,7 +20,7 @@ const DEFAULTS: PublicConfig = {
   turnstileSiteKey: "1x00000000000000000000AA",
   googleSignIn: false,
   phoneSignIn: false,
-  siteUrl: "http://localhost:5173",
+  siteUrl: "https://arunarya-sangam.kshipradt.workers.dev",
 };
 
 export function readPublicConfig(env: Record<string, string | undefined> = process.env): PublicConfig {
