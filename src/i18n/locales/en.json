@@ -438,5 +438,6 @@
   "auth.code.changePhone": "Use a different number",
   "auth.code.wrong": "That code is wrong or has expired. Check it, or ask for a new one.",
   "auth.code.unavailable": "Sign-in by code isn't available right now. Please use your password.",
-  "auth.code.smsFailed": "We couldn't send the SMS. Check the number and try again."
+  "auth.code.smsFailed": "We couldn't send the SMS. Check the number and try again.",
+  "auth.code.sentToEmail": "We emailed {target}. Enter the 6-digit code from that email, or simply tap the sign-in link in it."
 }

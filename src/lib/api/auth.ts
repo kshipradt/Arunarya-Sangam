@@ -69,11 +69,16 @@ export type OtpTarget = { email: string } | { phone: string };
  * (role buyer until they complete their profile) in their chosen language.
  */
 export async function sendSignInCode(target: OtpTarget, language: LanguageCode, captchaToken?: string | null) {
-  await request("/auth/v1/otp", {
+  // Until custom email templates are enabled, Supabase's email holds a link
+  // instead of a code; PKCE lets that link finish signing in on this device.
+  const email = "email" in target;
+  const pkce = email ? { code_challenge: await startPkce(), code_challenge_method: "s256" } : {};
+  await request(email ? `/auth/v1/otp?redirect_to=${encodeURIComponent(callbackUrl())}` : "/auth/v1/otp", {
     method: "POST",
     body: {
       ...target,
-      ...("phone" in target ? { channel: "sms" } : {}),
+      ...pkce,
+      ...(email ? {} : { channel: "sms" }),
       create_user: true,
       data: { preferred_language: language },
       ...security(captchaToken),

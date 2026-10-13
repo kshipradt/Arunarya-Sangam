@@ -439,8 +439,8 @@ try {
     await page.waitForTimeout(100);
     await page.getByRole("button", { name: "Send code" }).click();
     await page.waitForSelector("text=Enter your code");
-    const otp = calls.filter((c) => c.path === "/auth/v1/otp").at(-1)?.body;
-    check("Code request sends a clean email, language and captcha", otp?.email === "maker@example.in" && otp?.data?.preferred_language === "en" && otp?.gotrue_meta_security?.captcha_token === "test-token", JSON.stringify(otp));
+    const otp = calls.filter((c) => c.path.startsWith("/auth/v1/otp")).at(-1)?.body;
+    check("Code request sends a clean email, language and captcha", otp?.email === "maker@example.in" && otp?.data?.preferred_language === "en" && otp?.gotrue_meta_security?.captcha_token === "test-token" && otp?.code_challenge_method === "s256", JSON.stringify(otp));
     await page.getByLabel("6-digit code").fill("111111");
     await page.getByRole("button", { name: "Sign in" }).click();
     await page.waitForSelector(".alert-error");

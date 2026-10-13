@@ -101,7 +101,7 @@ export function CodeSignInPage() {
 
   if (target) {
     return (
-      <AuthCard title={t("auth.code.enterTitle")} lead={t("auth.code.sentTo", { target: shown })}>
+      <AuthCard title={t("auth.code.enterTitle")} lead={t(target && "email" in target ? "auth.code.sentToEmail" : "auth.code.sentTo", { target: shown })}>
         <form onSubmit={verify} noValidate>
           {formError && <Alert>{t(formError)}</Alert>}
           <TextField
