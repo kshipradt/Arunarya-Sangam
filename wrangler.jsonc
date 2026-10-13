@@ -1,0 +1,10 @@
+// Cloudflare hosting: the built site in ./dist is served as static files.
+// Unknown paths fall back to index.html so app links (e.g. /shop) work on reload.
+{
+  "name": "arunarya-sangam",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
+}
